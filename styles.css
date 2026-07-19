@@ -1,0 +1,39 @@
+.ytp-container {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	padding: 0;
+}
+
+.ytp-bar {
+	display: flex;
+	gap: 6px;
+	padding: 8px;
+	flex-shrink: 0;
+}
+
+.ytp-input {
+	flex: 1;
+	min-width: 0;
+}
+
+.ytp-player {
+	flex: 1;
+	min-height: 0;
+	display: flex;
+}
+
+.ytp-iframe {
+	width: 100%;
+	height: 100%;
+	border: none;
+	background-color: black;
+}
+
+.ytp-empty {
+	margin: auto;
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+	text-align: center;
+	padding: 0 16px;
+}
