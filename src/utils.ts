@@ -1,3 +1,10 @@
+import { requestUrl } from "obsidian";
+
+export interface QueueItem {
+	url: string;
+	title: string;
+}
+
 export interface ParsedYouTube {
 	videoId: string | null;
 	playlistId: string | null;
@@ -84,6 +91,24 @@ export function buildEmbedUrl(parsed: ParsedYouTube): string {
 	params.set("listType", "playlist");
 	params.set("list", parsed.playlistId!);
 	return `https://www.youtube-nocookie.com/embed/videoseries?${params}`;
+}
+
+/** Fetch a video's title via YouTube's oEmbed endpoint (no API key needed) */
+export async function fetchVideoTitle(input: string): Promise<string | null> {
+	const parsed = parseYouTubeUrl(input);
+	if (!parsed) return null;
+	const watchUrl = parsed.videoId
+		? `https://www.youtube.com/watch?v=${parsed.videoId}`
+		: `https://www.youtube.com/playlist?list=${parsed.playlistId}`;
+	try {
+		const res = await requestUrl(
+			`https://www.youtube.com/oembed?url=${encodeURIComponent(watchUrl)}&format=json`,
+		);
+		const title = res.json?.title;
+		return typeof title === "string" ? title : null;
+	} catch {
+		return null;
+	}
 }
 
 /** Find the first YouTube URL (or bare video id) inside a chunk of text */

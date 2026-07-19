@@ -1,13 +1,20 @@
 import { Editor, Menu, Notice, Plugin } from "obsidian";
 import { YouTubeView, YOUTUBE_PANEL_VIEW } from "./view";
-import { findYouTubeUrlInText } from "./utils";
+import {
+	fetchVideoTitle,
+	findYouTubeUrlInText,
+	parseYouTubeUrl,
+	QueueItem,
+} from "./utils";
 
 export interface YouTubePanelSettings {
 	lastUrl: string;
+	queue: QueueItem[];
 }
 
 const DEFAULT_SETTINGS: YouTubePanelSettings = {
 	lastUrl: "",
+	queue: [],
 };
 
 export default class YouTubePanelPlugin extends Plugin {
@@ -35,15 +42,25 @@ export default class YouTubePanelPlugin extends Plugin {
 			id: "play-selection",
 			name: "Play YouTube link from selection or current line",
 			editorCallback: (editor: Editor) => {
-				const text =
-					editor.getSelection() ||
-					editor.getLine(editor.getCursor().line);
-				const url = findYouTubeUrlInText(text);
+				const url = this.linkFromEditor(editor);
 				if (!url) {
 					new Notice("No YouTube link found in selection");
 					return;
 				}
 				void this.playUrl(url);
+			},
+		});
+
+		this.addCommand({
+			id: "queue-selection",
+			name: "Add YouTube link from selection or current line to queue",
+			editorCallback: (editor: Editor) => {
+				const url = this.linkFromEditor(editor);
+				if (!url) {
+					new Notice("No YouTube link found in selection");
+					return;
+				}
+				void this.addToQueue(url);
 			},
 		});
 
@@ -61,7 +78,7 @@ export default class YouTubePanelPlugin extends Plugin {
 			},
 		});
 
-		// Right-click a YouTube link in the editor → "Play in side panel"
+		// Right-click a YouTube link in the editor → play / queue
 		this.registerEvent(
 			this.app.workspace.on("editor-menu", (menu: Menu, editor: Editor) => {
 				const line = editor.getLine(editor.getCursor().line);
@@ -72,12 +89,23 @@ export default class YouTubePanelPlugin extends Plugin {
 						.setIcon("play-circle")
 						.onClick(() => void this.playUrl(url));
 				});
+				menu.addItem((item) => {
+					item.setTitle("Add to YouTube queue")
+						.setIcon("list-plus")
+						.onClick(() => void this.addToQueue(url));
+				});
 			}),
 		);
 	}
 
 	onunload() {
 		this.app.workspace.detachLeavesOfType(YOUTUBE_PANEL_VIEW);
+	}
+
+	private linkFromEditor(editor: Editor): string | null {
+		const text =
+			editor.getSelection() || editor.getLine(editor.getCursor().line);
+		return findYouTubeUrlInText(text);
 	}
 
 	/** Open (or reveal) the view in the right sidebar and return it */
@@ -102,8 +130,37 @@ export default class YouTubePanelPlugin extends Plugin {
 		view?.loadUrl(url);
 	}
 
+	/** Append a video to the queue and resolve its title in the background */
+	async addToQueue(input: string) {
+		const url = input.trim();
+		if (!parseYouTubeUrl(url)) {
+			new Notice("Not a recognizable YouTube URL");
+			return;
+		}
+		const item: QueueItem = { url, title: url };
+		this.settings.queue.push(item);
+		await this.saveSettings();
+		this.refreshQueueViews();
+		new Notice("Added to queue");
+
+		const title = await fetchVideoTitle(url);
+		if (title) {
+			item.title = title;
+			await this.saveSettings();
+			this.refreshQueueViews();
+		}
+	}
+
+	private refreshQueueViews() {
+		for (const leaf of this.app.workspace.getLeavesOfType(YOUTUBE_PANEL_VIEW)) {
+			if (leaf.view instanceof YouTubeView) leaf.view.refreshQueue();
+		}
+	}
+
 	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		const data = await this.loadData();
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, data);
+		if (!Array.isArray(this.settings.queue)) this.settings.queue = [];
 	}
 
 	async saveSettings() {
