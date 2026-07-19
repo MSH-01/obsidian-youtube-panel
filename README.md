@@ -65,6 +65,8 @@ This plugin does not collect or transmit any user data, and has no telemetry. It
 
 Nothing else is contacted, and nothing from your vault is ever sent — only the video URLs/ids and search terms you explicitly enter.
 
+**Clipboard**: the *Play YouTube link from clipboard* command reads the system clipboard, only at the moment you invoke it, to find a YouTube link. The plugin never writes to the clipboard, and clipboard content is never stored or transmitted.
+
 ## Notes
 
 - Desktop only (`isDesktopOnly: true`).
