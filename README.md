@@ -55,6 +55,16 @@ Copy (or symlink) the plugin folder into:
 
 The vault needs `manifest.json`, `main.js`, and `styles.css`. Then enable **YouTube Panel** in Settings → Community plugins.
 
+## Network use
+
+This plugin does not collect or transmit any user data, and has no telemetry. It connects to the network only to talk to YouTube (Google), and only when you play, queue, or search for a video:
+
+- **`youtube-nocookie.com`** — the embedded player itself. Videos stream directly from YouTube's privacy-enhanced embed domain, which does not set tracking cookies. Google's [privacy policy](https://policies.google.com/privacy) applies to playback.
+- **`youtube.com/oembed`** — fetched once per queued video to resolve its title.
+- **`youtube.com/results`** — fetched when you type in the search modal, to list matching videos.
+
+Nothing else is contacted, and nothing from your vault is ever sent — only the video URLs/ids and search terms you explicitly enter.
+
 ## Notes
 
 - Desktop only (`isDesktopOnly: true`).
