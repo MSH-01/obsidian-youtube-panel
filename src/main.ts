@@ -34,7 +34,7 @@ export default class YouTubePanelPlugin extends Plugin {
 		});
 
 		this.addCommand({
-			id: "open-youtube-panel",
+			id: "open-player",
 			name: "Open YouTube player",
 			callback: () => void this.activateView(),
 		});
@@ -105,10 +105,6 @@ export default class YouTubePanelPlugin extends Plugin {
 		);
 	}
 
-	onunload() {
-		this.app.workspace.detachLeavesOfType(YOUTUBE_PANEL_VIEW);
-	}
-
 	private linkFromEditor(editor: Editor): string | null {
 		const text =
 			editor.getSelection() || editor.getLine(editor.getCursor().line);
@@ -167,7 +163,7 @@ export default class YouTubePanelPlugin extends Plugin {
 	}
 
 	async loadSettings() {
-		const data = await this.loadData();
+		const data = (await this.loadData()) as Partial<YouTubePanelSettings> | null;
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, data);
 		if (!Array.isArray(this.settings.queue)) this.settings.queue = [];
 	}

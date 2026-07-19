@@ -231,22 +231,25 @@ export class YouTubeView extends ItemView {
 		}
 		if (typeof evt.data !== "string") return;
 
-		let data: { event?: string; info?: { playerState?: number } | number };
+		let parsed: unknown;
 		try {
-			data = JSON.parse(evt.data);
+			parsed = JSON.parse(evt.data);
 		} catch {
 			return;
 		}
+		if (!parsed || typeof parsed !== "object") return;
+		const data = parsed as { event?: unknown; info?: unknown };
 
 		let state: number | undefined;
 		if (data.event === "onStateChange" && typeof data.info === "number") {
 			state = data.info;
 		} else if (
 			data.event === "infoDelivery" &&
-			typeof data.info === "object" &&
-			typeof data.info?.playerState === "number"
+			data.info &&
+			typeof data.info === "object"
 		) {
-			state = data.info.playerState;
+			const playerState = (data.info as { playerState?: unknown }).playerState;
+			if (typeof playerState === "number") state = playerState;
 		}
 		if (state === undefined) return;
 

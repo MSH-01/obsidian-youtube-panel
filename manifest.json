@@ -2,7 +2,7 @@
 	"id": "youtube-panel",
 	"name": "YouTube Panel",
 	"version": "1.0.0",
-	"minAppVersion": "1.0.0",
+	"minAppVersion": "1.7.2",
 	"description": "Watch YouTube videos in the right sidebar while you take notes.",
 	"author": "msh",
 	"isDesktopOnly": true

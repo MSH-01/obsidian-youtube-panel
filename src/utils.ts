@@ -104,7 +104,9 @@ export async function fetchVideoTitle(input: string): Promise<string | null> {
 		const res = await requestUrl(
 			`https://www.youtube.com/oembed?url=${encodeURIComponent(watchUrl)}&format=json`,
 		);
-		const title = res.json?.title;
+		const json: unknown = res.json;
+		if (!json || typeof json !== "object") return null;
+		const title = (json as { title?: unknown }).title;
 		return typeof title === "string" ? title : null;
 	} catch {
 		return null;
@@ -119,15 +121,37 @@ export interface SearchResult {
 }
 
 /** Recursively collect every `videoRenderer` object in ytInitialData */
-function collectVideoRenderers(node: unknown, out: Record<string, any>[]) {
+function collectVideoRenderers(node: unknown, out: unknown[]) {
 	if (!node || typeof node !== "object") return;
 	if (Array.isArray(node)) {
 		for (const child of node) collectVideoRenderers(child, out);
 		return;
 	}
-	const obj = node as Record<string, any>;
-	if (obj.videoRenderer) out.push(obj.videoRenderer);
+	const obj = node as Record<string, unknown>;
+	if (obj.videoRenderer && typeof obj.videoRenderer === "object") {
+		out.push(obj.videoRenderer);
+	}
 	for (const value of Object.values(obj)) collectVideoRenderers(value, out);
+}
+
+function asString(value: unknown): string | null {
+	return typeof value === "string" ? value : null;
+}
+
+/** Extract `.runs[0].text` from a ytInitialData text object */
+function runText(value: unknown): string | null {
+	if (!value || typeof value !== "object") return null;
+	const runs = (value as { runs?: unknown }).runs;
+	if (!Array.isArray(runs)) return null;
+	const first: unknown = runs[0];
+	if (!first || typeof first !== "object") return null;
+	return asString((first as { text?: unknown }).text);
+}
+
+/** Extract `.simpleText` from a ytInitialData text object */
+function simpleText(value: unknown): string | null {
+	if (!value || typeof value !== "object") return null;
+	return asString((value as { simpleText?: unknown }).simpleText);
 }
 
 /**
@@ -152,18 +176,24 @@ export async function searchYouTube(query: string): Promise<SearchResult[]> {
 		return [];
 	}
 
-	const renderers: Record<string, any>[] = [];
+	const renderers: unknown[] = [];
 	collectVideoRenderers(data, renderers);
 
-	return renderers
-		.filter((r) => typeof r.videoId === "string")
-		.slice(0, 20)
-		.map((r) => ({
-			videoId: r.videoId as string,
-			title: r.title?.runs?.[0]?.text ?? "(untitled)",
-			channel: r.ownerText?.runs?.[0]?.text ?? "",
-			duration: r.lengthText?.simpleText ?? "",
-		}));
+	const results: SearchResult[] = [];
+	for (const renderer of renderers) {
+		if (!renderer || typeof renderer !== "object") continue;
+		const obj = renderer as Record<string, unknown>;
+		const videoId = asString(obj.videoId);
+		if (!videoId) continue;
+		results.push({
+			videoId,
+			title: runText(obj.title) ?? "(untitled)",
+			channel: runText(obj.ownerText) ?? "",
+			duration: simpleText(obj.lengthText) ?? "",
+		});
+		if (results.length >= 20) break;
+	}
+	return results;
 }
 
 /** Find the first YouTube URL (or bare video id) inside a chunk of text */

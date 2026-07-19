@@ -15,8 +15,13 @@ export class YouTubeSearchModal extends SuggestModal<SearchResult> {
 			{ command: "⌘ ↵", purpose: "play now" },
 		]);
 		this.scope.register(["Mod"], "Enter", (evt) => {
-			// @ts-expect-error private API: forward mod+enter to the selected item
-			this.chooser.useSelectedItem(evt);
+			// Undocumented API: forward mod+enter to the selected item
+			const chooser = (
+				this as unknown as {
+					chooser?: { useSelectedItem?: (evt: KeyboardEvent) => void };
+				}
+			).chooser;
+			chooser?.useSelectedItem?.(evt);
 			return false;
 		});
 	}
@@ -25,7 +30,7 @@ export class YouTubeSearchModal extends SuggestModal<SearchResult> {
 		const q = query.trim();
 		if (q.length < 2) return [];
 		// Debounce: wait, then bail if the input has changed since
-		await new Promise((resolve) => setTimeout(resolve, 350));
+		await new Promise((resolve) => window.setTimeout(resolve, 350));
 		if (this.inputEl.value.trim() !== q) return [];
 		try {
 			return await searchYouTube(q);
