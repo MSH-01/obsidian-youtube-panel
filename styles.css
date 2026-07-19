@@ -156,3 +156,24 @@
 	width: 14px;
 	height: 14px;
 }
+
+.ytp-icon-btn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.ytp-icon-btn svg {
+	width: 14px;
+	height: 14px;
+}
+
+/* Search modal */
+.ytp-search-title {
+	font-size: var(--font-ui-small);
+}
+
+.ytp-search-meta {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+}

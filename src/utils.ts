@@ -111,6 +111,61 @@ export async function fetchVideoTitle(input: string): Promise<string | null> {
 	}
 }
 
+export interface SearchResult {
+	videoId: string;
+	title: string;
+	channel: string;
+	duration: string;
+}
+
+/** Recursively collect every `videoRenderer` object in ytInitialData */
+function collectVideoRenderers(node: unknown, out: Record<string, any>[]) {
+	if (!node || typeof node !== "object") return;
+	if (Array.isArray(node)) {
+		for (const child of node) collectVideoRenderers(child, out);
+		return;
+	}
+	const obj = node as Record<string, any>;
+	if (obj.videoRenderer) out.push(obj.videoRenderer);
+	for (const value of Object.values(obj)) collectVideoRenderers(value, out);
+}
+
+/**
+ * Search YouTube without an API key by parsing the `ytInitialData` JSON
+ * embedded in the regular search results page.
+ */
+export async function searchYouTube(query: string): Promise<SearchResult[]> {
+	const res = await requestUrl(
+		`https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`,
+	);
+	const html = res.text;
+	const marker = "var ytInitialData = ";
+	const start = html.indexOf(marker);
+	if (start === -1) return [];
+	const end = html.indexOf(";</script>", start);
+	if (end === -1) return [];
+
+	let data: unknown;
+	try {
+		data = JSON.parse(html.slice(start + marker.length, end));
+	} catch {
+		return [];
+	}
+
+	const renderers: Record<string, any>[] = [];
+	collectVideoRenderers(data, renderers);
+
+	return renderers
+		.filter((r) => typeof r.videoId === "string")
+		.slice(0, 20)
+		.map((r) => ({
+			videoId: r.videoId as string,
+			title: r.title?.runs?.[0]?.text ?? "(untitled)",
+			channel: r.ownerText?.runs?.[0]?.text ?? "",
+			duration: r.lengthText?.simpleText ?? "",
+		}));
+}
+
 /** Find the first YouTube URL (or bare video id) inside a chunk of text */
 export function findYouTubeUrlInText(text: string): string | null {
 	const urlRe = /https?:\/\/[^\s)\]>"']+/g;

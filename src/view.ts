@@ -1,6 +1,7 @@
 import { ItemView, Notice, WorkspaceLeaf, setIcon } from "obsidian";
 import type YouTubePanelPlugin from "./main";
 import { buildEmbedUrl, parseYouTubeUrl } from "./utils";
+import { YouTubeSearchModal } from "./search-modal";
 
 export const YOUTUBE_PANEL_VIEW = "youtube-panel-view";
 
@@ -86,6 +87,15 @@ export class YouTubeView extends ItemView {
 				void this.addToQueue(this.urlInput.value);
 				this.urlInput.value = "";
 			}
+		});
+
+		const searchBtn = bar.createEl("button", {
+			cls: "ytp-go ytp-icon-btn",
+			attr: { "aria-label": "Search YouTube" },
+		});
+		setIcon(searchBtn, "search");
+		searchBtn.addEventListener("click", () => {
+			new YouTubeSearchModal(this.app, this.plugin).open();
 		});
 
 		// Listen for player state messages from the YouTube iframe

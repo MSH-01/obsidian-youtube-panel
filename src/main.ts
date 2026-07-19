@@ -1,5 +1,6 @@
 import { Editor, Menu, Notice, Plugin } from "obsidian";
 import { YouTubeView, YOUTUBE_PANEL_VIEW } from "./view";
+import { YouTubeSearchModal } from "./search-modal";
 import {
 	fetchVideoTitle,
 	findYouTubeUrlInText,
@@ -62,6 +63,12 @@ export default class YouTubePanelPlugin extends Plugin {
 				}
 				void this.addToQueue(url);
 			},
+		});
+
+		this.addCommand({
+			id: "search-youtube",
+			name: "Search YouTube",
+			callback: () => new YouTubeSearchModal(this.app, this).open(),
 		});
 
 		this.addCommand({
@@ -130,24 +137,26 @@ export default class YouTubePanelPlugin extends Plugin {
 		view?.loadUrl(url);
 	}
 
-	/** Append a video to the queue and resolve its title in the background */
-	async addToQueue(input: string) {
+	/** Append a video to the queue, resolving its title in the background if unknown */
+	async addToQueue(input: string, knownTitle?: string) {
 		const url = input.trim();
 		if (!parseYouTubeUrl(url)) {
 			new Notice("Not a recognizable YouTube URL");
 			return;
 		}
-		const item: QueueItem = { url, title: url };
+		const item: QueueItem = { url, title: knownTitle ?? url };
 		this.settings.queue.push(item);
 		await this.saveSettings();
 		this.refreshQueueViews();
 		new Notice("Added to queue");
 
-		const title = await fetchVideoTitle(url);
-		if (title) {
-			item.title = title;
-			await this.saveSettings();
-			this.refreshQueueViews();
+		if (!knownTitle) {
+			const title = await fetchVideoTitle(url);
+			if (title) {
+				item.title = title;
+				await this.saveSettings();
+				this.refreshQueueViews();
+			}
 		}
 	}
 
